@@ -1,0 +1,25 @@
+# Python temp files
+*.pyc
+build/
+dist/
+*.egg-info
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+*env*/
+
+bin/
+include/
+lib/
+lib64
+share/
+# The last five directories usually only appear in venvs,
+# so untracking them is a safeguard against cleverly-named
+# virtual environments.
+
+# Developer-specific environment stuff
+.idea/
+.vscode/
+codealike.json
+.python-version
