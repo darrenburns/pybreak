@@ -1,69 +1,36 @@
+import functools
 import inspect
 import sys
 import types
 from bdb import Bdb
-from typing import Optional, Iterable
+from pathlib import Path
+from typing import Optional, Iterable, Tuple
 
+import pygments
 from dataclasses import dataclass
 from pygments.lexers.python import PythonLexer
 
-from prompt_toolkit import PromptSession
-from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.layout import BufferControl, Window, ScrollbarMargin, NumberedMargin, Container
+from prompt_toolkit import PromptSession, print_formatted_text
+from prompt_toolkit.formatted_text import PygmentsTokens
 from prompt_toolkit.lexers import PygmentsLexer
+from prompt_toolkit.styles import Style
 
 
-class Repl:
-    def __init__(
-        self,
-        prompt: str = "> ",
-    ):
-        self.prompt = prompt
-        self.buffer = Buffer(
-            multiline=False,
-        )
-        self.control = BufferControl(
-            buffer=self.buffer,
-            lexer=PygmentsLexer(PythonLexer),
-            focusable=True,
-            focus_on_click=True,
-        )
-        self.window = Window(
-            content=self.control,
-            dont_extend_height=True,
-            dont_extend_width=True,
-            wrap_lines=True,
-            right_margins=[ScrollbarMargin(display_arrows=True)],
-            left_margins=[NumberedMargin()],  # TODO: Make margin indicate in/out nums
-        )
-
-    def __pt_container__(self) -> Container:
-        return self.window
-
-
-#####################################################
-#                           #                       #
-#                           #                       #
-#                           #   Local variables     #
-#                           #                       #
-#   Source code             #                       #
-#                           #                       #
-#                           #########################
-#                           #                       #
-#                           #                       #
-#                           #  Evaluate expression  #
-#                           #                       #
-#                           #                       #
-#                           #                       #
-#                           #                       #
-#                           #                       #
-#####################################################
+@functools.lru_cache(8)
+def get_file_lines(file_name: str) -> Tuple[str]:
+    with open(file_name, "rb") as f:
+        return tuple(line.decode("utf-8") for line in f.readlines())
 
 
 @dataclass
 class ActiveLine:
     file_name: str
     line_number: int
+
+
+styles = Style.from_dict({
+    'rprompt': 'gray',
+})
 
 
 class Pybreak(Bdb):
@@ -81,31 +48,45 @@ class Pybreak(Bdb):
     def repeatedly_prompt(self):
         while True:
             try:
-                input = self.session.prompt("> ")
+                input = self.session.prompt(
+                    "> ",
+                    lexer=PygmentsLexer(PythonLexer),
+                    rprompt=self._get_rprompt(),
+                    style=styles,
+                )
             except KeyboardInterrupt:
                 continue
             except EOFError:
                 break
             else:
-                print("You entered: ", input)
                 if input == "n":
                     self.do_next(self.current_frame)
-                    print(self.current_frame)
+                    self._print_new_dest()
                     # "n" results in continuing execution
                     break
-                if input == "q":
+                elif input == "q":
                     # Stop tracing and break out of prompt
                     self._quit()
-                    # TODO: Temp disable stdout to hide bdbquit error?
-                    #  doesn't seem to be catchable
                     break
+                elif input == "l":
+                    self._print_locals()
+                elif input == "a":
+                    self._print_args()
+
 
     def _quit(self):
         sys.settrace(None)
         self.quitting = True
 
-    def _print_current_frame(self):
-        print(f"{self.current_frame.f_lineno} | {self.current_frame.f_code.co_filename}")
+    def _print_new_dest(self):
+        file_name = self.current_frame.f_code.co_filename
+        line_number = self.current_frame.f_lineno
+        lines = get_file_lines(file_name)
+        line = lines[line_number]
+        output_line = f"{line_number} | {line}"
+        tokens = list(pygments.lex(output_line, lexer=PythonLexer()))
+        print_formatted_text(PygmentsTokens(tokens))
+        # print(f"{self.current_frame.f_lineno} | {self.current_frame.f_code.co_filename}")
 
     def user_call(self, frame: types.FrameType, argument_list):
         fname = frame.f_code.co_filename
@@ -141,6 +122,23 @@ class Pybreak(Bdb):
     def do_next(self, frame):
         self.set_next(frame)
 
+    def current_file(self):
+        pass
+
+    def _get_rprompt(self):
+        file_name = self.current_frame.f_code.co_filename
+        try:
+            rprompt = Path(file_name).relative_to(Path.cwd())
+        except ValueError:
+            rprompt = Path(file_name).stem
+
+        return str(rprompt)
+
+    def _print_locals(self):
+        print(self.current_frame.f_locals)
+
+    def _print_args(self):
+        print(inspect.getargvalues(self.current_frame))
 
 # You can only have a single instance of Pybreak alive at a time,
 # because it depends on Bdb which uses class-level state.
