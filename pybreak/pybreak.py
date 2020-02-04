@@ -1,6 +1,7 @@
 import functools
 import inspect
 import sys
+import traceback
 import types
 from bdb import Bdb
 from pathlib import Path
@@ -44,19 +45,23 @@ class Pybreak(Bdb):
         self.files_seen = []
         self.session = PromptSession()
         self.current_frame: Optional[types.FrameType] = None
+        self.eval_count: int = 0
 
     def repeatedly_prompt(self):
         while True:
             try:
                 input = self.session.prompt(
-                    "> ",
+                    self._get_lprompt(),
                     lexer=PygmentsLexer(PythonLexer),
                     rprompt=self._get_rprompt(),
                     style=styles,
+                    multiline=True,
                 )
+                print_formatted_text(input)
             except KeyboardInterrupt:
                 continue
             except EOFError:
+                print_formatted_text("eof")
                 break
             else:
                 if input == "n":
@@ -74,8 +79,9 @@ class Pybreak(Bdb):
                     self._print_args()
                 else:
                     # Command not recognised, so eval
+                    print()
+                    print_formatted_text("not recognised")
                     self._eval_and_print_result(input)
-
 
     def _quit(self):
         sys.settrace(None)
@@ -106,45 +112,71 @@ class Pybreak(Bdb):
          * break_here() yields true only if there's a breakpoint for this
          line
         """
+
         if self.stop_here(frame):
             # We're stopping at this frame, so update our internal
             # state.
             self.current_frame = frame
+            # TODO: Only capture output if continuation command ran
             self.repeatedly_prompt()
+
 
     def start(self, frame):
         super().set_trace(frame)
         self.current_frame = frame
 
+
     def do_continue(self):
         self.set_continue()
+
 
     def do_clear(self, arg):
         self.clear_all_breaks()
 
+
     def do_next(self, frame):
         self.set_next(frame)
+
 
     def current_file(self):
         pass
 
+
     def _get_rprompt(self):
         file_name = self.current_frame.f_code.co_filename
+        line_no = self.current_frame.f_lineno
         try:
             rprompt = Path(file_name).relative_to(Path.cwd())
         except ValueError:
             rprompt = Path(file_name).stem
 
-        return str(rprompt)
+        return f"{rprompt}:{line_no}"
+
 
     def _print_locals(self):
-        print(self.current_frame.f_locals)
+        print_formatted_text(self.current_frame.f_locals)
+
 
     def _print_args(self):
-        print(inspect.getargvalues(self.current_frame))
+        print_formatted_text(inspect.getargvalues(self.current_frame))
+
 
     def _eval_and_print_result(self, input: str):
-        print(self.runeval(input, self.current_frame.f_globals, self.current_frame.f_locals))
+        try:
+            print_formatted_text(self.runeval(input, self.current_frame.f_globals, self.current_frame.f_locals))
+        except Exception as err:
+            self._print_exception(err)
+        else:
+            self.eval_count += 1
+
+
+    def _print_exception(self, err):
+        print_formatted_text("".join(traceback.format_exception_only(type(err), err)))
+
+
+    def _get_lprompt(self):
+        return f"[{self.eval_count}] "
+
 
 # You can only have a single instance of Pybreak alive at a time,
 # because it depends on Bdb which uses class-level state.
