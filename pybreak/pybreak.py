@@ -72,6 +72,9 @@ class Pybreak(Bdb):
                     self._print_locals()
                 elif input == "a":
                     self._print_args()
+                else:
+                    # Command not recognised, so eval
+                    self._eval_and_print_result(input)
 
 
     def _quit(self):
@@ -139,6 +142,9 @@ class Pybreak(Bdb):
 
     def _print_args(self):
         print(inspect.getargvalues(self.current_frame))
+
+    def _eval_and_print_result(self, input: str):
+        print(self.runeval(input, self.current_frame.f_globals, self.current_frame.f_locals))
 
 # You can only have a single instance of Pybreak alive at a time,
 # because it depends on Bdb which uses class-level state.
