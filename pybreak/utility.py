@@ -27,11 +27,16 @@ def make_snippet(tokenised_lines, focus_line_idx: int):
     return with_gutter(snippet_lines, start_line_idx, corrected_line_index)
 
 
+def formatted_padding(n):
+    return 'class:pygments.text', (' ' * n)
+
+
 def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
     start_line_num = start_line_idx + 1
     g_width = len(str(start_line_num + len(lines)))
     updated_lines = []
     for i, line in enumerate(lines):
+        line = line + [formatted_padding(2)]
         # TODO: Conditionally style the line,
         #  only if it's the active one.
         if i == focus_line_idx:
