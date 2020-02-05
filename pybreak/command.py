@@ -4,33 +4,11 @@ import shlex
 import sys
 import types
 from enum import auto, Enum
-from typing import Tuple, Dict, Any, Sequence, Optional
+from typing import Tuple, Dict, Any
 
-import pygments
-from pygments.lexers.python import PythonLexer
+from pybreak.utility import get_location_snippet
 
 from prompt_toolkit import print_formatted_text as log
-from prompt_toolkit.formatted_text import PygmentsTokens
-from pybreak.utility import get_file_lines
-
-
-def python_lines(
-    lines: Sequence[str],
-    starting_line_number: int,
-    active_line: Optional[int] = None,
-) -> PygmentsTokens:
-    g_width = len(str(starting_line_number + len(lines)))
-    gutter = " {:>{g_width}} {sep} {}"
-    lines = [gutter.format(
-        starting_line_number + i,
-        line,
-        g_width=g_width,
-        sep=">" if starting_line_number + i == active_line else "|",
-    ) for i, line in enumerate(lines)]
-    src = "".join(lines)
-    tokens = list(pygments.lex(src, lexer=PythonLexer()))
-    tokens = PygmentsTokens(tokens)
-    return tokens
 
 
 class After(Enum):
@@ -80,20 +58,16 @@ class PrintNearbyCode(Command):
     """
 
     alias_list = ("l", "line", "lines")
-    LINES_BEFORE = 5
-    LINES_AFTER = 5
 
     def run(self, debugger, frame, *args):
         # TODO, take the number of lines to show from
         #  the args rather than hardcoding
-        lines = get_file_lines(frame.f_code.co_filename)
+        file_name = frame.f_code.co_filename
         line_no = frame.f_lineno
-        from_index = max(line_no - self.LINES_BEFORE, 0)
-        to_index = min(line_no + self.LINES_AFTER, len(lines))
-        nearby = lines[from_index:to_index]
-        from_line_number = from_index + 1
+        lines = get_location_snippet(file_name, line_no)
         log("")
-        log(python_lines(nearby, from_line_number, line_no))
+        for line in lines:
+            log(line)
 
 
 class PrettyPrintValue(Command):

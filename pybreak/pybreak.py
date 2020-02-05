@@ -7,13 +7,15 @@ from pathlib import Path
 from typing import Optional, Iterable
 
 from dataclasses import dataclass
+from pybreak import __version__
+from pybreak.command import Command, After, Quit
+from pybreak.utility import get_terminal_size
 from pygments.lexers.python import PythonLexer
 
-from prompt_toolkit import PromptSession, print_formatted_text
+from prompt_toolkit import PromptSession, print_formatted_text, HTML
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
-from pybreak.command import Command, After, Quit
 
 
 @dataclass
@@ -99,8 +101,10 @@ class Pybreak(Bdb):
             self.repeatedly_prompt()
 
     def start(self, frame):
+        num_cols = get_terminal_size().cols
         if self.num_prompts < 1:
-            print("HELLO")
+            print_formatted_text(HTML('_' * num_cols))
+            print_formatted_text(HTML(f"<b>Pybreak v{__version__}</b>\n"))
         super().set_trace(frame)
         self.current_frame = frame
 
