@@ -169,6 +169,7 @@ class Continue(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_continue()
+        PrintNearbyCode().run(debugger, frame)
 
 
 class Quit(Command):
