@@ -9,7 +9,7 @@ from typing import Optional, Iterable
 
 from dataclasses import dataclass
 from pybreak import __version__
-from pybreak.command import Command, After, Quit
+from pybreak.command import Command, After, Quit, PrintNearbyCode
 from pybreak.utility import get_terminal_size
 from pygments.lexers.python import PythonLexer
 
@@ -48,9 +48,13 @@ class Pybreak(Bdb):
         )
         self.current_frame: Optional[types.FrameType] = None
         self.eval_count: int = 0
+        self.prev_command = None
 
     def repeatedly_prompt(self):
+        if self.prev_command and self.prev_command.after == After.Proceed:
+            PrintNearbyCode().run(self, self.current_frame)
         while True:
+
             self.num_prompts += 1
             try:
                 input = self.session.prompt()
@@ -70,6 +74,7 @@ class Pybreak(Bdb):
                 self._eval_and_print_result(input)
             else:
                 cmd.run(self, self.current_frame, *args)
+                self.prev_command = cmd
                 if cmd.after == After.Proceed:
                     break
                 elif cmd.after == After.Stay:
@@ -125,10 +130,13 @@ class Pybreak(Bdb):
 
     def _get_bottom_toolbar(self):
         frameinfo = inspect.getframeinfo(self.current_frame)
+        args = inspect.getargvalues(self.current_frame)
         term_width = get_terminal_size().cols
-        content = f" in {Path(frameinfo.filename).stem}:{frameinfo.function} "
+        content = f" in {Path(frameinfo.filename).stem}:{frameinfo.function}:{frameinfo.lineno} {args.locals}"
+
         content = textwrap.shorten(content, width=term_width - 1)
         content = f"{content:<{term_width}}"
+
         return HTML(f'<style fg="dodgerblue" bg="white">{content}</style>!')
 
     def _eval_and_print_result(self, input: str):

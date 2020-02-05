@@ -133,7 +133,6 @@ class NextLine(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_next(frame)
-        PrintNearbyCode().run(debugger, frame)
 
 
 class Continue(Command):
@@ -146,7 +145,6 @@ class Continue(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_continue()
-        PrintNearbyCode().run(debugger, frame)
 
 
 class Quit(Command):
