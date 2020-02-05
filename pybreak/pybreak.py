@@ -22,7 +22,7 @@ class ActiveLine:
     line_number: int
 
 
-styles = Style.from_dict({"rprompt": "gray",})
+styles = Style.from_dict({"rprompt": "gray", })
 
 
 class Pybreak(Bdb):
@@ -30,6 +30,7 @@ class Pybreak(Bdb):
         self, skip: Optional[Iterable[str]] = None,
     ):
         super().__init__(skip=skip)
+        self.num_prompts = 0
         self.skip = skip
         self.paused_at_line = False
         self.files_seen = []
@@ -46,6 +47,7 @@ class Pybreak(Bdb):
 
     def repeatedly_prompt(self):
         while True:
+            self.num_prompts += 1
             try:
                 input = self.session.prompt()
                 if not input:
@@ -56,20 +58,14 @@ class Pybreak(Bdb):
                 Quit().run(self, self.current_frame, ())
                 break
 
-            # TODO: Move the next few lines into Command
-            #  and make less naive, e.g. support string args
-            #  where strings have spaces :)
-            parts = input.split(" ")
-            cmd_name = parts[0]
-            cmd_args = parts[1:]
             try:
-                cmd = Command.from_alias(cmd_name)
+                cmd, args = Command.from_raw_input(input)
             except KeyError:
                 # The user entered text that doesn't correspond
                 # to a standard command. Evaluate it.
                 self._eval_and_print_result(input)
             else:
-                cmd.run(self, self.current_frame, *cmd_args)
+                cmd.run(self, self.current_frame, *args)
                 if cmd.after == After.Proceed:
                     break
                 elif cmd.after == After.Stay:
@@ -103,6 +99,8 @@ class Pybreak(Bdb):
             self.repeatedly_prompt()
 
     def start(self, frame):
+        if self.num_prompts < 1:
+            print("HELLO")
         super().set_trace(frame)
         self.current_frame = frame
 

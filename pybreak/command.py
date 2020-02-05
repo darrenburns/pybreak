@@ -1,9 +1,10 @@
 import bdb
 import inspect
+import shlex
 import sys
 import types
 from enum import auto, Enum
-from typing import Tuple, Dict, Any, Sequence
+from typing import Tuple, Dict, Any, Sequence, Optional
 
 import pygments
 from pygments.lexers.python import PythonLexer
@@ -13,10 +14,19 @@ from prompt_toolkit.formatted_text import PygmentsTokens
 from pybreak.utility import get_file_lines
 
 
-def python_lines(lines: Sequence[str], starting_line_number: int) -> PygmentsTokens:
+def python_lines(
+    lines: Sequence[str],
+    starting_line_number: int,
+    active_line: Optional[int] = None,
+) -> PygmentsTokens:
     g_width = len(str(starting_line_number + len(lines)))
-    gutter = " {:>{g_width}} | {}"
-    lines = [gutter.format(starting_line_number + i, line, g_width=g_width) for i, line in enumerate(lines)]
+    gutter = " {:>{g_width}} {sep} {}"
+    lines = [gutter.format(
+        starting_line_number + i,
+        line,
+        g_width=g_width,
+        sep=">" if starting_line_number + i == active_line else "|",
+    ) for i, line in enumerate(lines)]
     src = "".join(lines)
     tokens = list(pygments.lex(src, lexer=PythonLexer()))
     tokens = PygmentsTokens(tokens)
@@ -49,8 +59,13 @@ class Command:
         raise NotImplementedError("Command.run must be implemented by subclasses.")
 
     @classmethod
-    def from_alias(cls, input) -> "Command":
-        return cls.all[input]
+    def from_raw_input(cls, input) -> Tuple["Command", Tuple[Any]]:
+        parts = shlex.split(input)
+        if len(parts) > 1:
+            args = tuple(parts[1:])
+        else:
+            args = ()
+        return cls.all[parts[0]], args
 
     def validate_args(self, called_with: Tuple[Any]):
         if len(called_with) != self.arity:
@@ -69,6 +84,8 @@ class PrintNearbyCode(Command):
     LINES_AFTER = 5
 
     def run(self, debugger, frame, *args):
+        # TODO, take the number of lines to show from
+        #  the args rather than hardcoding
         lines = get_file_lines(frame.f_code.co_filename)
         line_no = frame.f_lineno
         from_index = max(line_no - self.LINES_BEFORE, 0)
@@ -76,7 +93,7 @@ class PrintNearbyCode(Command):
         nearby = lines[from_index:to_index]
         from_line_number = from_index + 1
         log("")
-        log(python_lines(nearby, from_line_number))
+        log(python_lines(nearby, from_line_number, line_no))
 
 
 class PrettyPrintValue(Command):
@@ -85,7 +102,7 @@ class PrettyPrintValue(Command):
     """
 
     alias_list = ("pp", "pretty", "pprint")
-    arity = 1  # TODO: Could we define this stuff with argparse, and process with argparse?
+    arity = 1
 
     def run(self, debugger, frame, *args):
         self.validate_args(args)
@@ -139,11 +156,7 @@ class NextLine(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_next(frame)
-        file_name = frame.f_code.co_filename
-        line_number = frame.f_lineno
-        lines = get_file_lines(file_name)
-        line = lines[line_number]
-        output_line = f"{line_number} | {line}"
+        PrintNearbyCode().run(debugger, frame)
 
 
 class Continue(Command):
