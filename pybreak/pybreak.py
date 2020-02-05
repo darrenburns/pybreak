@@ -13,7 +13,7 @@ from prompt_toolkit import PromptSession, print_formatted_text
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
-from pybreak.command import Command, After
+from pybreak.command import Command, After, Quit
 
 
 @dataclass
@@ -22,7 +22,7 @@ class ActiveLine:
     line_number: int
 
 
-styles = Style.from_dict({"rprompt": "gray",})
+styles = Style.from_dict({"rprompt": "gray", })
 
 
 class Pybreak(Bdb):
@@ -50,14 +50,18 @@ class Pybreak(Bdb):
                 input = self.session.prompt()
                 if not input:
                     continue
-                parts = input.split(" ")
-                cmd_name = parts[0]
-                cmd_args = parts[1:]
             except KeyboardInterrupt:
                 continue
             except EOFError:
+                Quit().run(self, self.current_frame, ())
                 break
 
+            # TODO: Move the next few lines into Command
+            #  and make less naive, e.g. support string args
+            #  where strings have spaces :)
+            parts = input.split(" ")
+            cmd_name = parts[0]
+            cmd_args = parts[1:]
             try:
                 cmd = Command.from_alias(cmd_name)
             except KeyError:
