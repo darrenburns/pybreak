@@ -37,8 +37,6 @@ def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
     updated_lines = []
     for i, line in enumerate(lines):
         line = line + [formatted_padding(2)]
-        # TODO: Conditionally style the line,
-        #  only if it's the active one.
         if i == focus_line_idx:
             bg = "bg:#313131 bold"
         else:
