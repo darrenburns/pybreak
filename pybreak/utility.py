@@ -34,10 +34,21 @@ def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
     for i, line in enumerate(lines):
         # TODO: Conditionally style the line,
         #  only if it's the active one.
+        if i == focus_line_idx:
+            bg = "bg:#313131 bold"
+        else:
+            bg = None
+
+        if i == focus_line_idx:
+            gutter_fg = "greenyellow"
+            gutter_bg = ""
+        else:
+            gutter_fg = "slategray"
+            gutter_bg = ""
         gutter_tokens = HTML(
-            f"<b> {start_line_num + i:>{g_width}} | </b>"
+            f"<span fg='{gutter_fg}'> {start_line_num + i:>{g_width}}  |</span>  "
         ).formatted_text
-        full_line = to_formatted_text(gutter_tokens + line)
+        full_line = to_formatted_text(gutter_tokens + line, style=bg)
         updated_lines.append(full_line)
 
     return updated_lines
