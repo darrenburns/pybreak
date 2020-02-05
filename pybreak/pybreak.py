@@ -22,15 +22,12 @@ class ActiveLine:
     line_number: int
 
 
-styles = Style.from_dict({
-    'rprompt': 'gray',
-})
+styles = Style.from_dict({"rprompt": "gray",})
 
 
 class Pybreak(Bdb):
     def __init__(
-        self,
-        skip: Optional[Iterable[str]] = None,
+        self, skip: Optional[Iterable[str]] = None,
     ):
         super().__init__(skip=skip)
         self.skip = skip
@@ -51,19 +48,24 @@ class Pybreak(Bdb):
         while True:
             try:
                 input = self.session.prompt()
+                if not input:
+                    continue
+                parts = input.split(" ")
+                cmd_name = parts[0]
+                cmd_args = parts[1:]
             except KeyboardInterrupt:
                 continue
             except EOFError:
                 break
 
             try:
-                cmd = Command.from_alias(input)
+                cmd = Command.from_alias(cmd_name)
             except KeyError:
                 # The user entered text that doesn't correspond
                 # to a standard command. Evaluate it.
                 self._eval_and_print_result(input)
             else:
-                cmd.run(self, self.current_frame)
+                cmd.run(self, self.current_frame, *cmd_args)
                 if cmd.after == After.Proceed:
                     break
                 elif cmd.after == After.Stay:
@@ -115,7 +117,11 @@ class Pybreak(Bdb):
 
     def _eval_and_print_result(self, input: str):
         try:
-            print_formatted_text(self.runeval(input, self.current_frame.f_globals, self.current_frame.f_locals))
+            print_formatted_text(
+                self.runeval(
+                    input, self.current_frame.f_globals, self.current_frame.f_locals
+                )
+            )
         except Exception as err:
             self._print_exception(err)
         else:
