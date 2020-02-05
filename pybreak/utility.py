@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pygments.lexers.python import PythonLexer
 
 from prompt_toolkit import HTML
-from prompt_toolkit.formatted_text import PygmentsTokens, split_lines, to_formatted_text
+from prompt_toolkit.formatted_text import PygmentsTokens, split_lines, to_formatted_text, fragment_list_len
 
 
 def get_location_snippet(file_name: str, focus_line: int):
@@ -19,7 +19,7 @@ def get_location_snippet(file_name: str, focus_line: int):
 def make_snippet(tokenised_lines, focus_line_idx: int):
     lines_around = 5  # TODO make arg
     start_line_idx = max(focus_line_idx - lines_around, 0)
-    end_line_idx = min(focus_line_idx + lines_around, len(tokenised_lines))
+    end_line_idx = min(focus_line_idx + lines_around + 1, len(tokenised_lines))
     snippet_lines = tokenised_lines[start_line_idx:end_line_idx]
 
     # We've trimmed the lines, so correct the line to focus on
@@ -28,15 +28,20 @@ def make_snippet(tokenised_lines, focus_line_idx: int):
 
 
 def formatted_padding(n):
-    return 'class:pygments.text', (' ' * n)
+    return 'class:pygments.text', (" " * n)
 
 
 def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
     start_line_num = start_line_idx + 1
-    g_width = len(str(start_line_num + len(lines)))
     updated_lines = []
+    gutter_padding = 5  # Not ideal manually maintaining this
+    term_width = get_terminal_size().cols
     for i, line in enumerate(lines):
-        line = line + [formatted_padding(2)]
+        real_line_no = start_line_num + i
+        line_number_width = len(str(real_line_no))
+        g_width = line_number_width + gutter_padding
+        rpad_amount = term_width - g_width - fragment_list_len(line)
+        line = line + [formatted_padding(rpad_amount)]
         if i == focus_line_idx:
             bg = "bg:#313131 bold"
         else:
@@ -46,9 +51,10 @@ def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
             gutter_fg = "greenyellow"
         else:
             gutter_fg = "slategray"
-        gutter_tokens = HTML(
-            f"<span fg='{gutter_fg}'> {start_line_num + i:>{g_width}}  </span>  "
-        ).formatted_text
+        gutter_tokens = to_formatted_text(HTML(
+            f"<span fg='{gutter_fg}'> {start_line_num + i:>{line_number_width}}  </span>  "
+        ))
+        line = to_formatted_text(line)
         full_line = to_formatted_text(gutter_tokens + line, style=bg)
         updated_lines.append(full_line)
 
@@ -64,7 +70,7 @@ def get_tokenised_lines(file_name: str):
         src = f.read()
         tokens = pygments.lex(src, lexer=PythonLexer())
         tokens = to_formatted_text(PygmentsTokens(tokens))
-        return list(to_formatted_text(l) for l in split_lines(tokens))
+        return list(l for l in split_lines(tokens))
 
 
 @dataclass

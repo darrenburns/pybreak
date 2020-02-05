@@ -1,5 +1,6 @@
 import inspect
 import sys
+import textwrap
 import traceback
 import types
 from bdb import Bdb
@@ -43,6 +44,7 @@ class Pybreak(Bdb):
             style=styles,
             auto_suggest=AutoSuggestFromHistory(),
             multiline=True,
+            bottom_toolbar=self._get_bottom_toolbar,
         )
         self.current_frame: Optional[types.FrameType] = None
         self.eval_count: int = 0
@@ -120,6 +122,14 @@ class Pybreak(Bdb):
             rprompt = Path(file_name).stem
 
         return f"{rprompt}:{line_no}"
+
+    def _get_bottom_toolbar(self):
+        frameinfo = inspect.getframeinfo(self.current_frame)
+        term_width = get_terminal_size().cols
+        content = f" in {Path(frameinfo.filename).stem}:{frameinfo.function} "
+        content = textwrap.shorten(content, width=term_width - 1)
+        content = f"{content:<{term_width}}"
+        return HTML(f'<style fg="dodgerblue" bg="white">{content}</style>!')
 
     def _eval_and_print_result(self, input: str):
         try:

@@ -7,8 +7,10 @@ from enum import auto, Enum
 from typing import Tuple, Dict, Any
 
 from pybreak.utility import get_location_snippet
+from pygments.styles import get_style_by_name
 
 from prompt_toolkit import print_formatted_text as log
+from prompt_toolkit.styles import style_from_pygments_cls
 
 
 class After(Enum):
@@ -67,7 +69,8 @@ class PrintNearbyCode(Command):
         lines = get_location_snippet(file_name, line_no)
         log("")
         for line in lines:
-            log(line)
+            log(line, style=style_from_pygments_cls(get_style_by_name('monokai')))
+        log("")
 
 
 class PrettyPrintValue(Command):
