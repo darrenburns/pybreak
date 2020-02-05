@@ -1,26 +1,19 @@
-import functools
 import inspect
 import sys
 import traceback
 import types
 from bdb import Bdb
 from pathlib import Path
-from typing import Optional, Iterable, Tuple
+from typing import Optional, Iterable
 
-import pygments
 from dataclasses import dataclass
 from pygments.lexers.python import PythonLexer
 
 from prompt_toolkit import PromptSession, print_formatted_text
-from prompt_toolkit.formatted_text import PygmentsTokens
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
-
-
-@functools.lru_cache(8)
-def get_file_lines(file_name: str) -> Tuple[str]:
-    with open(file_name, "rb") as f:
-        return tuple(line.decode("utf-8") for line in f.readlines())
+from pybreak.command import Command, After
 
 
 @dataclass
@@ -43,59 +36,42 @@ class Pybreak(Bdb):
         self.skip = skip
         self.paused_at_line = False
         self.files_seen = []
-        self.session = PromptSession()
+        self.session = PromptSession(
+            self._get_lprompt,
+            lexer=PygmentsLexer(PythonLexer),
+            rprompt=self._get_rprompt,
+            style=styles,
+            auto_suggest=AutoSuggestFromHistory(),
+            multiline=True,
+        )
         self.current_frame: Optional[types.FrameType] = None
         self.eval_count: int = 0
 
     def repeatedly_prompt(self):
         while True:
             try:
-                input = self.session.prompt(
-                    self._get_lprompt(),
-                    lexer=PygmentsLexer(PythonLexer),
-                    rprompt=self._get_rprompt(),
-                    style=styles,
-                    multiline=True,
-                )
-                print_formatted_text(input)
+                input = self.session.prompt()
             except KeyboardInterrupt:
                 continue
             except EOFError:
-                print_formatted_text("eof")
                 break
+
+            try:
+                cmd = Command.from_alias(input)
+            except KeyError:
+                # The user entered text that doesn't correspond
+                # to a standard command. Evaluate it.
+                self._eval_and_print_result(input)
             else:
-                if input == "n":
-                    self.do_next(self.current_frame)
-                    self._print_new_dest()
-                    # "n" results in continuing execution
+                cmd.run(self, self.current_frame)
+                if cmd.after == After.Proceed:
                     break
-                elif input == "q":
-                    # Stop tracing and break out of prompt
-                    self._quit()
-                    break
-                elif input == "l":
-                    self._print_locals()
-                elif input == "a":
-                    self._print_args()
-                else:
-                    # Command not recognised, so eval
-                    print()
-                    print_formatted_text("not recognised")
-                    self._eval_and_print_result(input)
+                elif cmd.after == After.Stay:
+                    continue
 
     def _quit(self):
         sys.settrace(None)
         self.quitting = True
-
-    def _print_new_dest(self):
-        file_name = self.current_frame.f_code.co_filename
-        line_number = self.current_frame.f_lineno
-        lines = get_file_lines(file_name)
-        line = lines[line_number]
-        output_line = f"{line_number} | {line}"
-        tokens = list(pygments.lex(output_line, lexer=PythonLexer()))
-        print_formatted_text(PygmentsTokens(tokens))
-        # print(f"{self.current_frame.f_lineno} | {self.current_frame.f_code.co_filename}")
 
     def user_call(self, frame: types.FrameType, argument_list):
         fname = frame.f_code.co_filename
@@ -120,27 +96,12 @@ class Pybreak(Bdb):
             # TODO: Only capture output if continuation command ran
             self.repeatedly_prompt()
 
-
     def start(self, frame):
         super().set_trace(frame)
         self.current_frame = frame
 
-
-    def do_continue(self):
-        self.set_continue()
-
-
     def do_clear(self, arg):
         self.clear_all_breaks()
-
-
-    def do_next(self, frame):
-        self.set_next(frame)
-
-
-    def current_file(self):
-        pass
-
 
     def _get_rprompt(self):
         file_name = self.current_frame.f_code.co_filename
@@ -152,15 +113,6 @@ class Pybreak(Bdb):
 
         return f"{rprompt}:{line_no}"
 
-
-    def _print_locals(self):
-        print_formatted_text(self.current_frame.f_locals)
-
-
-    def _print_args(self):
-        print_formatted_text(inspect.getargvalues(self.current_frame))
-
-
     def _eval_and_print_result(self, input: str):
         try:
             print_formatted_text(self.runeval(input, self.current_frame.f_globals, self.current_frame.f_locals))
@@ -169,10 +121,8 @@ class Pybreak(Bdb):
         else:
             self.eval_count += 1
 
-
     def _print_exception(self, err):
         print_formatted_text("".join(traceback.format_exception_only(type(err), err)))
-
 
     def _get_lprompt(self):
         return f"[{self.eval_count}] "
