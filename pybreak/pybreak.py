@@ -22,7 +22,7 @@ class ActiveLine:
     line_number: int
 
 
-styles = Style.from_dict({"rprompt": "gray", })
+styles = Style.from_dict({"rprompt": "gray",})
 
 
 class Pybreak(Bdb):

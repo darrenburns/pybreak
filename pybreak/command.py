@@ -3,7 +3,7 @@ import inspect
 import sys
 import types
 from enum import auto, Enum
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Sequence
 
 import pygments
 from pygments.lexers.python import PythonLexer
@@ -11,6 +11,16 @@ from pygments.lexers.python import PythonLexer
 from prompt_toolkit import print_formatted_text as log
 from prompt_toolkit.formatted_text import PygmentsTokens
 from pybreak.utility import get_file_lines
+
+
+def python_lines(lines: Sequence[str], starting_line_number: int) -> PygmentsTokens:
+    g_width = len(str(starting_line_number + len(lines)))
+    gutter = " {:>{g_width}} | {}"
+    lines = [gutter.format(starting_line_number + i, line, g_width=g_width) for i, line in enumerate(lines)]
+    src = "".join(lines)
+    tokens = list(pygments.lex(src, lexer=PythonLexer()))
+    tokens = PygmentsTokens(tokens)
+    return tokens
 
 
 class After(Enum):
@@ -51,20 +61,31 @@ class Command:
 
 class PrintNearbyCode(Command):
     """
-    .
+    Print the lines surrounding the current line.
     """
+
     alias_list = ("l", "line", "lines")
+    LINES_BEFORE = 5
+    LINES_AFTER = 5
 
     def run(self, debugger, frame, *args):
-        log(frame.f_locals)
+        lines = get_file_lines(frame.f_code.co_filename)
+        line_no = frame.f_lineno
+        from_index = max(line_no - self.LINES_BEFORE, 0)
+        to_index = min(line_no + self.LINES_AFTER, len(lines))
+        nearby = lines[from_index:to_index]
+        from_line_number = from_index + 1
+        log("")
+        log(python_lines(nearby, from_line_number))
 
 
 class PrettyPrintValue(Command):
     """
     Pretty print a variable that is currently in scope.
     """
+
     alias_list = ("pp", "pretty", "pprint")
-    arity = 1  # TODO: Use an ArgSpec instead of arity, could do optional args etc.
+    arity = 1  # TODO: Could we define this stuff with argparse, and process with argparse?
 
     def run(self, debugger, frame, *args):
         self.validate_args(args)
@@ -74,6 +95,7 @@ class PrintArguments(Command):
     """
     Print the arguments of the current function.
     """
+
     alias_list = ("a", "args")
 
     def run(self, debugger, frame, *args):
@@ -111,6 +133,7 @@ class NextLine(Command):
     """
     Continue execution until the next line.
     """
+
     alias_list = ("n", "next")
     after = After.Proceed
 
@@ -121,14 +144,13 @@ class NextLine(Command):
         lines = get_file_lines(file_name)
         line = lines[line_number]
         output_line = f"{line_number} | {line}"
-        tokens = list(pygments.lex(output_line, lexer=PythonLexer()))
-        log(PygmentsTokens(tokens))
 
 
 class Continue(Command):
     """
     Continue execution until the next break point.
     """
+
     alias_list = ("c", "cont", "continue")
     after = After.Proceed
 
@@ -140,6 +162,7 @@ class Quit(Command):
     """
     Quit Pybreak.
     """
+
     alias_list = ("q", "quit")
     after = After.Proceed
 
@@ -152,6 +175,7 @@ class NextReturn(Command):
     """
     Continue execution until the current function returns.
     """
+
     alias_list = ("r", "return")
     after = After.Proceed
 
@@ -165,6 +189,7 @@ class Step(Command):
     moment. This could be in a function called on the current line,
     or perhaps on the next line.
     """
+
     alias_list = ("s", "step")
 
     def run(self, debugger, frame, *args):
