@@ -41,12 +41,10 @@ def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
 
         if i == focus_line_idx:
             gutter_fg = "greenyellow"
-            gutter_bg = ""
         else:
             gutter_fg = "slategray"
-            gutter_bg = ""
         gutter_tokens = HTML(
-            f"<span fg='{gutter_fg}'> {start_line_num + i:>{g_width}}  |</span>  "
+            f"<span fg='{gutter_fg}'> {start_line_num + i:>{g_width}}  </span>  "
         ).formatted_text
         full_line = to_formatted_text(gutter_tokens + line, style=bg)
         updated_lines.append(full_line)
