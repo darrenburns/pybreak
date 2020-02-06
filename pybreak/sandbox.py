@@ -2,6 +2,7 @@ from pybreak import pybreak
 
 
 def merge_sort(m):
+    pybreak.set_trace()
     if len(m) <= 1:  # Base case
         return m
 
@@ -15,7 +16,6 @@ def merge_sort(m):
 
 
 def merge(left, right):
-    pybreak.set_trace()
     result = []
     left_idx, right_idx = 0, 0
     while left_idx < len(left) and right_idx < len(right):

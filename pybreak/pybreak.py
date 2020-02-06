@@ -7,7 +7,6 @@ from bdb import Bdb
 from pathlib import Path
 from typing import Optional, Iterable
 
-from dataclasses import dataclass
 from pybreak import __version__
 from pybreak.command import Command, After, Quit, PrintNearbyCode
 from pybreak.utility import get_terminal_size
@@ -19,19 +18,17 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style, style_from_pygments_cls, merge_styles
 
-
-@dataclass
-class ActiveLine:
-    file_name: str
-    line_number: int
-
-
 styles = Style.from_dict({"rprompt": "gray"})
 
 styles = merge_styles([
     styles,
     style_from_pygments_cls(get_style_by_name('monokai'))
 ])
+
+
+def prompt_continuation(width, line_number, is_soft_wrap):
+    continuation = '.' * (width - 1)
+    return HTML(f"<green>{continuation}</green>")
 
 
 class Pybreak(Bdb):
@@ -51,6 +48,7 @@ class Pybreak(Bdb):
             auto_suggest=AutoSuggestFromHistory(),
             multiline=True,
             bottom_toolbar=self._get_bottom_toolbar,
+            prompt_continuation=prompt_continuation,
         )
         self.current_frame: Optional[types.FrameType] = None
         self.eval_count: int = 0
@@ -91,8 +89,7 @@ class Pybreak(Bdb):
         self.quitting = True
 
     def user_call(self, frame: types.FrameType, argument_list):
-        fname = frame.f_code.co_filename
-        lineno = frame.f_lineno
+        pass
 
     def user_line(self, frame: types.FrameType):
         """
@@ -105,7 +102,6 @@ class Pybreak(Bdb):
          * break_here() yields true only if there's a breakpoint for this
          line
         """
-
         if self.stop_here(frame):
             # We're stopping at this frame, so update our internal
             # state.
