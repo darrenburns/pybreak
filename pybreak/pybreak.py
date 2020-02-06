@@ -12,11 +12,12 @@ from pybreak import __version__
 from pybreak.command import Command, After, Quit, PrintNearbyCode
 from pybreak.utility import get_terminal_size
 from pygments.lexers.python import PythonLexer
+from pygments.styles import get_style_by_name
 
 from prompt_toolkit import PromptSession, print_formatted_text, HTML
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.lexers import PygmentsLexer
-from prompt_toolkit.styles import Style
+from prompt_toolkit.styles import Style, style_from_pygments_cls, merge_styles
 
 
 @dataclass
@@ -25,7 +26,12 @@ class ActiveLine:
     line_number: int
 
 
-styles = Style.from_dict({"rprompt": "gray", })
+styles = Style.from_dict({"rprompt": "gray"})
+
+styles = merge_styles([
+    styles,
+    style_from_pygments_cls(get_style_by_name('monokai'))
+])
 
 
 class Pybreak(Bdb):
@@ -132,12 +138,12 @@ class Pybreak(Bdb):
         frameinfo = inspect.getframeinfo(self.current_frame)
         args = inspect.getargvalues(self.current_frame)
         term_width = get_terminal_size().cols
-        content = f" in {Path(frameinfo.filename).stem}:{frameinfo.function}:{frameinfo.lineno} {args.locals}"
+        content = f"{Path(frameinfo.filename).stem}:{frameinfo.function}:{frameinfo.lineno} {args.locals}"
 
-        content = textwrap.shorten(content, width=term_width - 1)
+        content = textwrap.shorten(content, width=term_width - 2)
         content = f"{content:<{term_width}}"
 
-        return HTML(f'<style fg="dodgerblue" bg="white">{content}</style>!')
+        return HTML('<style fg="dodgerblue" bg="white"> {} </style>').format(content)
 
     def _eval_and_print_result(self, input: str):
         try:
@@ -155,7 +161,7 @@ class Pybreak(Bdb):
         print_formatted_text("".join(traceback.format_exception_only(type(err), err)))
 
     def _get_lprompt(self):
-        return f"[{self.eval_count}] "
+        return HTML(f"<green>In [</green><b>{self.eval_count}</b><green>]</green>: ")
 
 
 # You can only have a single instance of Pybreak alive at a time,
