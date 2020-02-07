@@ -6,7 +6,7 @@ import traceback
 import types
 from bdb import Bdb
 from pathlib import Path
-from typing import Optional, Iterable, List
+from typing import Optional, List
 
 import pygments
 from pygments.lexers.python import PythonLexer
@@ -44,14 +44,9 @@ def prompt_continuation(width, line_number, is_soft_wrap):
 
 
 class Pybreak(Bdb):
-    def __init__(
-        self, skip: Optional[Iterable[str]] = None,
-    ):
-        super().__init__(skip=skip)
+    def __init__(self):
+        super().__init__()
         self.num_prompts = 0
-        self.skip = skip
-        self.paused_at_line = False
-        self.files_seen = []
         self.current_frame: Optional[types.FrameType] = None
         self.stack: List[inspect.Traceback] = []
         self.eval_count: int = 0
@@ -75,6 +70,7 @@ class Pybreak(Bdb):
         def _(event: KeyPressEvent):
             def do_hist():
                 print_formatted_text(pprint.pformat(self.stack))
+
             run_in_terminal(do_hist)
 
         self.session = PromptSession(
