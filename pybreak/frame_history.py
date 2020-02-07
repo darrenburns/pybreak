@@ -22,7 +22,7 @@ class FrameHistory:
         to indicate where we're at in execution.
         """
         frame_state = FrameState(frame)
-        self.location = frame_state.uuid
+        self.location = frame_state.uuid  # always refers to latest EXECUTED frame. nothing to do with history...
         self.history[self.location] = frame_state
         self.hist_index = len(self.history) - 1  # move view back to latest frame
 
@@ -41,3 +41,7 @@ class FrameHistory:
     def rewind(self, n: int = 1) -> FrameState:
         self.hist_index = max(0, self.hist_index - n)
         return self.hist_frame
+
+    @property
+    def viewing_history(self):
+        return self.hist_index != len(self.history) - 1
