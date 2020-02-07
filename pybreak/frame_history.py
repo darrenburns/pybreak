@@ -12,15 +12,19 @@ FrameUUID = str
 class FrameHistory:
     history: Dict[FrameUUID, FrameState] = field(default_factory=dict)
     location: Optional[FrameUUID] = None
+    hist_index: int = 1  # indicates where we are in history
 
     def append(self, frame: types.FrameType):
         """
         Append the frame to the history, and update
-        the current location.
+        the current location. When we append a frame to the
+        history, we implicitly update the current location
+        to indicate where we're at in execution.
         """
         frame_state = FrameState(frame)
         self.location = frame_state.uuid
         self.history[self.location] = frame_state
+        self.hist_index = len(self.history) - 1  # move view back to latest frame
 
     @property
     def exec_frame(self) -> FrameState:
@@ -29,3 +33,7 @@ class FrameHistory:
         location.
         """
         return self.history[self.location]
+
+    @property
+    def hist_frame(self) -> FrameState:
+        return list(self.history.values())[self.hist_index]

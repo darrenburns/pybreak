@@ -64,8 +64,7 @@ class Pybreak(Bdb):
         @bindings.add("c-h")
         def _(event: KeyPressEvent):
             def do_hist():
-                hist = [frame.lineno for frame in self.frame_history.history.values()]
-                print_formatted_text(pprint.pformat(hist))
+                print_formatted_text(pprint.pformat(vars(self.frame_history.hist_frame)))
 
             run_in_terminal(do_hist)
 
