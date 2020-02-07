@@ -1,4 +1,5 @@
 import inspect
+import pprint
 import sys
 import textwrap
 import traceback
@@ -7,16 +8,22 @@ from bdb import Bdb
 from pathlib import Path
 from typing import Optional, Iterable
 
-from pybreak import __version__
-from pybreak.command import Command, After, Quit, PrintNearbyCode
-from pybreak.utility import get_terminal_size
+import pygments
 from pygments.lexers.python import PythonLexer
 from pygments.styles import get_style_by_name
 
 from prompt_toolkit import PromptSession, print_formatted_text, HTML
+from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.filters import Condition
+from prompt_toolkit.formatted_text import PygmentsTokens
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding.key_processor import KeyPressEvent
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style, style_from_pygments_cls, merge_styles
+from pybreak import __version__
+from pybreak.command import Command, After, Quit, PrintNearbyCode, NextLine
+from pybreak.utility import get_terminal_size
 
 styles = Style.from_dict({"rprompt": "gray"})
 
@@ -24,6 +31,11 @@ styles = merge_styles([
     styles,
     style_from_pygments_cls(get_style_by_name('monokai'))
 ])
+
+
+@Condition
+def take_newline(*args, **kwargs):
+    return True
 
 
 def prompt_continuation(width, line_number, is_soft_wrap):
@@ -40,25 +52,40 @@ class Pybreak(Bdb):
         self.skip = skip
         self.paused_at_line = False
         self.files_seen = []
+        self.current_frame: Optional[types.FrameType] = None
+        self.eval_count: int = 0
+        self.prev_command = None
+
+        bindings = KeyBindings()
+
+        @bindings.add('c-n')
+        def _(event: KeyPressEvent):
+            buffer = event.current_buffer
+
+            def do_next():
+                buffer.insert_text("next")
+                self.prev_command = NextLine
+                buffer.validate_and_handle()
+
+            run_in_terminal(do_next)
+
         self.session = PromptSession(
             self._get_lprompt,
             lexer=PygmentsLexer(PythonLexer),
             rprompt=self._get_rprompt,
             style=styles,
             auto_suggest=AutoSuggestFromHistory(),
-            multiline=True,
+            multiline=take_newline,
             bottom_toolbar=self._get_bottom_toolbar,
             prompt_continuation=prompt_continuation,
+            key_bindings=bindings,
+            input_processors={}
         )
-        self.current_frame: Optional[types.FrameType] = None
-        self.eval_count: int = 0
-        self.prev_command = None
 
     def repeatedly_prompt(self):
         if self.prev_command and self.prev_command.after == After.Proceed:
             PrintNearbyCode().run(self, self.current_frame)
         while True:
-
             self.num_prompts += 1
             try:
                 input = self.session.prompt()
@@ -69,7 +96,6 @@ class Pybreak(Bdb):
             except EOFError:
                 Quit().run(self, self.current_frame, ())
                 break
-
             try:
                 cmd, args = Command.from_raw_input(input)
             except KeyError:
@@ -113,7 +139,7 @@ class Pybreak(Bdb):
         num_cols = get_terminal_size().cols
         if self.num_prompts < 1:
             print_formatted_text(HTML('_' * num_cols))
-            print_formatted_text(HTML(f"<b>Pybreak v{__version__}</b>\n"))
+            print_formatted_text(HTML(f"<b>Pybreak {__version__}</b>\n"))
         super().set_trace(frame)
         self.current_frame = frame
 
@@ -143,11 +169,11 @@ class Pybreak(Bdb):
 
     def _eval_and_print_result(self, input: str):
         try:
-            print_formatted_text(
-                self.runeval(
-                    input, self.current_frame.f_globals, self.current_frame.f_locals
-                )
-            )
+            output = pprint.pformat(self.runeval(
+                input, self.current_frame.f_globals, self.current_frame.f_locals
+            ))
+            tokens = pygments.lex(output, lexer=PythonLexer())
+            print_formatted_text(PygmentsTokens(tokens))
         except Exception as err:
             self._print_exception(err)
         else:

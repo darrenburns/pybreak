@@ -38,9 +38,7 @@ def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
     gutter_padding = 5  # Not ideal manually maintaining this
     term_width = get_terminal_size().cols
     for i, line in enumerate(lines):
-        real_line_no = start_line_num + i
         max_line_number_width = len(str(start_line_num + len(lines)))
-        line_number_width = len(str(real_line_no))
         g_width = max_line_number_width + gutter_padding
         rpad_amount = term_width - g_width - fragment_list_len(line)
         line = line + [formatted_padding(rpad_amount)]
