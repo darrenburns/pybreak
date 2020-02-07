@@ -68,9 +68,13 @@ class PrintNearbyCode(Command):
     def run(self, debugger, frame, *args):
         # TODO, take the number of lines to show from
         #  the args rather than hardcoding
-        file_name = frame.filename
-        line_no = frame.lineno
-        lines = get_location_snippet(file_name, line_no)
+        file_name = debugger.frame_history.exec_frame.filename
+        line_no = debugger.frame_history.exec_frame.lineno
+        if debugger.frame_history.exec_frame.raw_frame is frame.raw_frame:
+            secondary_line_no = debugger.frame_history.hist_frame.lineno
+        else:
+            secondary_line_no = -1
+        lines = get_location_snippet(file_name, line_no, secondary_line_no)
         log("")
         for line in lines:
             log(line, style=style_from_pygments_cls(get_style_by_name('monokai')))

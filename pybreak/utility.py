@@ -9,14 +9,15 @@ from prompt_toolkit import HTML
 from prompt_toolkit.formatted_text import PygmentsTokens, split_lines, to_formatted_text, fragment_list_len
 
 
-def get_location_snippet(file_name: str, focus_line: int):
+def get_location_snippet(file_name: str, focus_line: int, secondary_focus_line: int):
     line_idx = max(0, focus_line - 1)
+    secondary_line_idx = max(0, secondary_focus_line - 1)
     tokenised = get_tokenised_lines(file_name)
-    snippet = make_snippet(tokenised, line_idx)
+    snippet = make_snippet(tokenised, line_idx, secondary_line_idx)
     return snippet
 
 
-def make_snippet(tokenised_lines, focus_line_idx: int):
+def make_snippet(tokenised_lines, focus_line_idx: int, secondary_focus_line_idx: int):
     lines_around = 5  # TODO make arg
     start_line_idx = max(focus_line_idx - lines_around, 0)
     end_line_idx = min(focus_line_idx + lines_around + 1, len(tokenised_lines))
@@ -24,14 +25,15 @@ def make_snippet(tokenised_lines, focus_line_idx: int):
 
     # We've trimmed the lines, so correct the line to focus on
     corrected_line_index = focus_line_idx - start_line_idx
-    return with_gutter(snippet_lines, start_line_idx, corrected_line_index)
+    corrected_secondary_line_index = secondary_focus_line_idx - start_line_idx
+    return with_gutter(snippet_lines, start_line_idx, corrected_line_index, corrected_secondary_line_index)
 
 
 def formatted_padding(n):
     return 'class:pygments.text', (" " * n)
 
 
-def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
+def with_gutter(lines, start_line_idx: int, focus_line_idx: int, secondary_focus_idx: int):
     start_line_num = start_line_idx + 1
     updated_lines = []
     gutter_padding = 5  # Not ideal manually maintaining this
@@ -43,13 +45,14 @@ def with_gutter(lines, start_line_idx: int, focus_line_idx: int):
         line = line + [formatted_padding(rpad_amount)]
         if i == focus_line_idx:
             bg = "bg:#313131 bold"
+            gutter_fg = "greenyellow"
+        elif i == secondary_focus_idx and focus_line_idx != secondary_focus_idx:
+            bg = "bg:#313131 bold"
+            gutter_fg = "coral"
         else:
             bg = None
-
-        if i == focus_line_idx:
-            gutter_fg = "greenyellow"
-        else:
             gutter_fg = "slategray"
+
         gutter_tokens = to_formatted_text(HTML(
             f"<span fg='{gutter_fg}'> {start_line_num + i:>{max_line_number_width}}  </span>  "
         ))
