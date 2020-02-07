@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pybreak"
-version = "0.1.0"
+version = "0.2.0dev0"
 description = "pybreak"
 authors = ["Darren Burns <darren.burns@fanduel.com>"]
 
