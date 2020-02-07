@@ -42,6 +42,10 @@ class FrameHistory:
         self.hist_index = max(0, self.hist_index - n)
         return self.hist_frame
 
+    def forward(self, n: int = 1) -> FrameState:
+        self.hist_index = min(self.hist_index + n, len(self.history) - 1)
+        return self.hist_frame
+
     @property
     def viewing_history(self):
         return self.hist_index != len(self.history) - 1

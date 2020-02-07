@@ -14,7 +14,7 @@ from pybreak.utility import get_location_snippet
 
 class After(Enum):
     Stay = auto()  # Stay still, we're just looking
-    Proceed = auto()  # Moves us forward in the code
+    Proceed = auto()  # For commands that increase the size of the stack, i.e. actually execute code
 
 
 Alias = str
@@ -29,8 +29,13 @@ class Command:
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         instance = cls()
+        # TODO: Detect alias clashes between multiple commands
         for alias in cls.alias_list:
             cls.all[alias] = instance
+
+    @classmethod
+    def instance(cls):
+        return cls.all[cls.alias_list[0]]
 
     def run(
         self, debugger: bdb.Bdb, frame: FrameState, *args,
@@ -135,6 +140,24 @@ class NextLine(Command):
     def run(self, debugger, frame, *args):
         debugger.set_next(frame.raw_frame)
         debugger.prev_command = self
+
+
+class Back(Command):
+    alias_list = ("b", "back")
+    after = After.Stay  # length of stack remains same
+
+    def run(self, debugger, frame, *args):
+        previous_frame = debugger.frame_history.rewind()
+        PrintNearbyCode.instance().run(debugger, previous_frame)
+
+
+class Forward(Command):
+    alias_list = ("f", "forward")
+    after = After.Stay
+
+    def run(self, debugger, frame, *args):
+        next_frame = debugger.frame_history.forward()
+        PrintNearbyCode.instance().run(debugger, next_frame)
 
 
 class Continue(Command):

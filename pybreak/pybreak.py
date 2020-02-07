@@ -61,12 +61,27 @@ class Pybreak(Bdb):
 
             run_in_terminal(do_next)
 
-        @bindings.add("c-h")
+        @bindings.add("c-b")
         def _(event: KeyPressEvent):
-            def do_hist():
-                print_formatted_text(pprint.pformat(vars(self.frame_history.rewind())))
+            buffer = event.current_buffer
 
-            run_in_terminal(do_hist)
+            def do_back():
+                cmd_name = "back"
+                buffer.insert_text(cmd_name)
+                buffer.validate_and_handle()
+
+            run_in_terminal(do_back)
+
+        @bindings.add("c-f")
+        def _(event: KeyPressEvent):
+            buffer = event.current_buffer
+
+            def do_forward():
+                cmd_name = "forward"
+                buffer.insert_text(cmd_name)
+                buffer.validate_and_handle()
+
+            run_in_terminal(do_forward)
 
         self.session = PromptSession(
             self._get_lprompt,
@@ -155,7 +170,6 @@ class Pybreak(Bdb):
         f = self.frame_history.exec_frame
         term_width = get_terminal_size().cols
         content = f"{Path(f.filename).stem}:{f.frame_info.function}:{f.lineno}{' HISTORY ' if self.frame_history.viewing_history else ''}{f.frame_locals}"
-
 
         content = textwrap.shorten(content, width=term_width - 2)
         content = f"{content:<{term_width}}"
