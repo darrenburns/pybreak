@@ -37,3 +37,7 @@ class FrameHistory:
     @property
     def hist_frame(self) -> FrameState:
         return list(self.history.values())[self.hist_index]
+
+    def rewind(self, n: int = 1) -> FrameState:
+        self.hist_index = max(0, self.hist_index - n)
+        return self.hist_frame
