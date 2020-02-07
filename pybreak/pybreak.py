@@ -71,6 +71,12 @@ class Pybreak(Bdb):
 
             run_in_terminal(do_next)
 
+        @bindings.add("c-h")
+        def _(event: KeyPressEvent):
+            def do_hist():
+                pprint.pprint(self.stack)
+            run_in_terminal(do_hist)
+
         self.session = PromptSession(
             self._get_lprompt,
             lexer=PygmentsLexer(PythonLexer),
