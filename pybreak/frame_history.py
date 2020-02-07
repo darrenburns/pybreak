@@ -9,7 +9,7 @@ FrameUUID = str
 
 
 @dataclass
-class StateManager:
+class FrameHistory:
     history: Dict[FrameUUID, FrameState] = field(default_factory=dict)
     location: Optional[FrameUUID] = None
 

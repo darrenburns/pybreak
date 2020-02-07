@@ -74,7 +74,7 @@ class Pybreak(Bdb):
         @bindings.add("c-h")
         def _(event: KeyPressEvent):
             def do_hist():
-                pprint.pprint(self.stack)
+                print_formatted_text(pprint.pformat(self.stack))
             run_in_terminal(do_hist)
 
         self.session = PromptSession(
