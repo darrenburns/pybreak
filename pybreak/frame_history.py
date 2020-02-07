@@ -23,7 +23,7 @@ class FrameHistory:
         self.history[self.location] = frame_state
 
     @property
-    def current_frame(self) -> FrameState:
+    def exec_frame(self) -> FrameState:
         """
         Retrieve the FrameState from the current
         location.
