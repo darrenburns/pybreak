@@ -154,7 +154,8 @@ class Pybreak(Bdb):
     def _get_bottom_toolbar(self):
         f = self.frame_history.exec_frame
         term_width = get_terminal_size().cols
-        content = f"{Path(f.filename).stem}:{f.frame_info.function}:{f.lineno} {f.frame_locals}"
+        content = f"{Path(f.filename).stem}:{f.frame_info.function}:{f.lineno}{' HISTORY ' if self.frame_history.viewing_history else ''}{f.frame_locals}"
+
 
         content = textwrap.shorten(content, width=term_width - 2)
         content = f"{content:<{term_width}}"
