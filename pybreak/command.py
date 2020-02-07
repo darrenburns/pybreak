@@ -6,11 +6,11 @@ import types
 from enum import auto, Enum
 from typing import Tuple, Dict, Any
 
-from pybreak.utility import get_location_snippet
 from pygments.styles import get_style_by_name
 
 from prompt_toolkit import print_formatted_text as log
 from prompt_toolkit.styles import style_from_pygments_cls
+from pybreak.utility import get_location_snippet
 
 
 class After(Enum):

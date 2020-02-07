@@ -63,7 +63,7 @@ class Pybreak(Bdb):
             buffer = event.current_buffer
 
             def do_next():
-                buffer.insert_text("next")
+                buffer.insert_text(NextLine.alias_list[-1])
                 self.prev_command = NextLine
                 buffer.validate_and_handle()
 
