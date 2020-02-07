@@ -198,7 +198,7 @@ class Pybreak(Bdb):
     def _eval_and_print_result(self, input: str):
         try:
             output = pprint.pformat(self.runeval(
-                input, self.frame_history.exec_frame.frame_info.frame, self.frame_history.exec_frame.frame_locals
+                input, self.frame_history.exec_frame.raw_frame.f_globals, self.frame_history.exec_frame.frame_locals
             ))
             tokens = pygments.lex(output, lexer=PythonLexer())
             print_formatted_text(PygmentsTokens(tokens))
