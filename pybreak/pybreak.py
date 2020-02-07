@@ -169,12 +169,31 @@ class Pybreak(Bdb):
     def _get_bottom_toolbar(self):
         f = self.frame_history.exec_frame
         term_width = get_terminal_size().cols
-        content = f"{Path(f.filename).stem}:{f.frame_info.function}:{f.lineno}{' HISTORY ' if self.frame_history.viewing_history else ''}{f.frame_locals}"
 
-        content = textwrap.shorten(content, width=term_width - 2)
-        content = f"{content:<{term_width}}"
+        stack_size = len(self.frame_history.history)
+        r_offset = stack_size - self.frame_history.hist_index
+        if self.frame_history.viewing_history:
+            mode_fg = "coral"
+            mode_bg = "black"
+            mode = f" Location: STACK[-{r_offset}] "
+        else:
+            mode_fg = "mediumseagreen"
+            mode_bg = "white"
+            mode = f" Location: STACK[-1] "
 
-        return HTML('<style fg="dodgerblue" bg="white"> {} </style>').format(content)
+        mode_width = len(mode)
+
+        content = f"Paused @ {Path(f.filename).stem}:{f.frame_info.function}:{f.lineno}"
+        content = textwrap.shorten(content, width=term_width - mode_width - 2)
+        content = f"{content:<{term_width - mode_width - 2}}"
+
+        return HTML('<style fg="dodgerblue" bg="white"> {content} </style>'
+                    '<style fg="{mode_fg}" bg="{mode_bg}">{mode}</style>').format(
+            content=content,
+            mode=mode,
+            mode_fg=mode_fg,
+            mode_bg=mode_bg,
+        )
 
     def _eval_and_print_result(self, input: str):
         try:

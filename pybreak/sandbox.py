@@ -1,3 +1,5 @@
+import pdb
+
 from pybreak import pybreak
 
 
@@ -5,13 +7,16 @@ from pybreak import pybreak
 
 
 def merge_sort(m):
-    pybreak.set_trace()
     if len(m) <= 1:  # Base case
         return m
 
     middle = len(m) // 2
+    pybreak.set_trace()
+    print("ON LINE 15")
     left = m[:middle]
+    print("ON LINE 17")
     right = m[middle:]
+    print("ON LINE 18")
 
     left = merge_sort(left)
     right = merge_sort(right)
