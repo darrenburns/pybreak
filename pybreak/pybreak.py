@@ -6,7 +6,7 @@ import traceback
 import types
 from bdb import Bdb
 from pathlib import Path
-from typing import Optional, Iterable
+from typing import Optional, Iterable, List
 
 import pygments
 from pygments.lexers.python import PythonLexer
@@ -53,6 +53,7 @@ class Pybreak(Bdb):
         self.paused_at_line = False
         self.files_seen = []
         self.current_frame: Optional[types.FrameType] = None
+        self.stack: List[inspect.Traceback] = []
         self.eval_count: int = 0
         self.prev_command = None
 
@@ -129,6 +130,7 @@ class Pybreak(Bdb):
          line
         """
         if self.stop_here(frame):
+            self.stack.append(inspect.getframeinfo(frame))
             # We're stopping at this frame, so update our internal
             # state.
             self.current_frame = frame

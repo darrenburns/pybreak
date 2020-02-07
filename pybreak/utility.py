@@ -1,6 +1,5 @@
 import functools
 import os
-from pprint import pprint
 
 import pygments
 from dataclasses import dataclass
