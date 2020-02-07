@@ -83,6 +83,7 @@ class PrettyPrintValue(Command):
 
     def run(self, debugger, frame, *args):
         self.validate_args(args)
+        debugger.prev_command = self
 
 
 class PrintArguments(Command):
@@ -94,6 +95,7 @@ class PrintArguments(Command):
 
     def run(self, debugger, frame, *args):
         log(inspect.getargvalues(frame))
+        debugger.prev_command = self
 
 
 class WatchVariable(Command):
@@ -104,7 +106,7 @@ class WatchVariable(Command):
     """
 
     def run(self, debugger, frame, *args):
-        pass
+        debugger.prev_command = self
 
     alias_list = ("w", "watch")
     arity = 1
@@ -117,7 +119,7 @@ class DiffVariable(Command):
     """
 
     def run(self, debugger, frame, *args):
-        pass
+        debugger.prev_command = self
 
     alias_list = ("d", "diff")
     arity = 1
@@ -133,6 +135,7 @@ class NextLine(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_next(frame)
+        debugger.prev_command = self
 
 
 class Continue(Command):
@@ -145,6 +148,7 @@ class Continue(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_continue()
+        debugger.prev_command = self
 
 
 class Quit(Command):
@@ -157,6 +161,7 @@ class Quit(Command):
 
     def run(self, debugger, frame, *args):
         sys.settrace(None)
+        debugger.prev_command = self
         debugger.quitting = True
 
 
@@ -170,6 +175,7 @@ class NextReturn(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_return(frame)
+        debugger.prev_command = self
 
 
 class Step(Command):
@@ -183,3 +189,4 @@ class Step(Command):
 
     def run(self, debugger, frame, *args):
         debugger.set_step()
+        debugger.prev_command = self

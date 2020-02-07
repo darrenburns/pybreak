@@ -22,7 +22,7 @@ from prompt_toolkit.key_binding.key_processor import KeyPressEvent
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style, style_from_pygments_cls, merge_styles
 from pybreak import __version__
-from pybreak.command import Command, After, Quit, PrintNearbyCode, NextLine
+from pybreak.command import Command, After, Quit, PrintNearbyCode
 from pybreak.utility import get_terminal_size
 
 styles = Style.from_dict({"rprompt": "gray"})
@@ -64,8 +64,9 @@ class Pybreak(Bdb):
             buffer = event.current_buffer
 
             def do_next():
-                buffer.insert_text(NextLine.alias_list[-1])
-                self.prev_command = NextLine
+                cmd_name = "next"
+                buffer.insert_text(cmd_name)
+                Command.from_raw_input(cmd_name)
                 buffer.validate_and_handle()
 
             run_in_terminal(do_next)
@@ -105,7 +106,6 @@ class Pybreak(Bdb):
                 self._eval_and_print_result(input)
             else:
                 cmd.run(self, self.current_frame, *args)
-                self.prev_command = cmd
                 if cmd.after == After.Proceed:
                     break
                 elif cmd.after == After.Stay:
