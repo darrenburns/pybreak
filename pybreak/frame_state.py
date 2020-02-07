@@ -14,6 +14,7 @@ def frame_uuid():
 @dataclass
 class FrameState:
     def __init__(self, frame: types.FrameType):
+        self.raw_frame = frame
         self.frame_info: inspect.Traceback = inspect.getframeinfo(frame)
         self.frame_locals: Dict[str, Any] = frame.f_locals
         self.uuid: str = frame_uuid()

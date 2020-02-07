@@ -1,8 +1,6 @@
 import bdb
-import inspect
 import shlex
 import sys
-import types
 from enum import auto, Enum
 from typing import Tuple, Dict, Any
 
@@ -10,6 +8,7 @@ from pygments.styles import get_style_by_name
 
 from prompt_toolkit import print_formatted_text as log
 from prompt_toolkit.styles import style_from_pygments_cls
+from pybreak.frame_state import FrameState
 from pybreak.utility import get_location_snippet
 
 
@@ -34,7 +33,7 @@ class Command:
             cls.all[alias] = instance
 
     def run(
-        self, debugger: bdb.Bdb, frame: types.FrameType, *args,
+        self, debugger: bdb.Bdb, frame: FrameState, *args,
     ):
         raise NotImplementedError("Command.run must be implemented by subclasses.")
 
@@ -64,8 +63,8 @@ class PrintNearbyCode(Command):
     def run(self, debugger, frame, *args):
         # TODO, take the number of lines to show from
         #  the args rather than hardcoding
-        file_name = frame.f_code.co_filename
-        line_no = frame.f_lineno
+        file_name = frame.filename
+        line_no = frame.lineno
         lines = get_location_snippet(file_name, line_no)
         log("")
         for line in lines:
@@ -94,7 +93,7 @@ class PrintArguments(Command):
     alias_list = ("a", "args")
 
     def run(self, debugger, frame, *args):
-        log(inspect.getargvalues(frame))
+        log(frame.frame_locals)
         debugger.prev_command = self
 
 
@@ -134,7 +133,7 @@ class NextLine(Command):
     after = After.Proceed
 
     def run(self, debugger, frame, *args):
-        debugger.set_next(frame)
+        debugger.set_next(frame.raw_frame)
         debugger.prev_command = self
 
 
@@ -174,7 +173,7 @@ class NextReturn(Command):
     after = After.Proceed
 
     def run(self, debugger, frame, *args):
-        debugger.set_return(frame)
+        debugger.set_return(frame.raw_frame)
         debugger.prev_command = self
 
 
@@ -184,7 +183,7 @@ class Step(Command):
     moment. This could be in a function called on the current line,
     or perhaps on the next line.
     """
-
+    after = After.Proceed
     alias_list = ("s", "step")
 
     def run(self, debugger, frame, *args):

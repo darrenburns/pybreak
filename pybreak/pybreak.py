@@ -6,7 +6,6 @@ import traceback
 import types
 from bdb import Bdb
 from pathlib import Path
-from typing import Optional, List
 
 import pygments
 from pygments.lexers.python import PythonLexer
@@ -22,6 +21,7 @@ from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style, style_from_pygments_cls, merge_styles
 from pybreak import __version__
 from pybreak.command import Command, After, Quit, PrintNearbyCode
+from pybreak.frame_history import FrameHistory
 from pybreak.utility import get_terminal_size
 
 styles = Style.from_dict({"rprompt": "gray"})
@@ -41,8 +41,9 @@ class Pybreak(Bdb):
     def __init__(self):
         super().__init__()
         self.num_prompts = 0
-        self.current_frame: Optional[types.FrameType] = None
-        self.stack: List[inspect.Traceback] = []
+        # self.frame_history.exec_frame: Optional[types.FrameType] = None
+        # self.stack: List[inspect.Traceback] = []
+        self.frame_history = FrameHistory()
         self.eval_count: int = 0
         self.prev_command = None
 
@@ -63,7 +64,8 @@ class Pybreak(Bdb):
         @bindings.add("c-h")
         def _(event: KeyPressEvent):
             def do_hist():
-                print_formatted_text(pprint.pformat(self.stack))
+                hist = [frame.lineno for frame in self.frame_history.history.values()]
+                print_formatted_text(pprint.pformat(hist))
 
             run_in_terminal(do_hist)
 
@@ -82,7 +84,7 @@ class Pybreak(Bdb):
 
     def repeatedly_prompt(self):
         if self.prev_command and self.prev_command.after == After.Proceed:
-            PrintNearbyCode().run(self, self.current_frame)
+            PrintNearbyCode().run(self, self.frame_history.exec_frame)
         while True:
             self.num_prompts += 1
             try:
@@ -92,7 +94,7 @@ class Pybreak(Bdb):
             except KeyboardInterrupt:
                 continue
             except EOFError:
-                Quit().run(self, self.current_frame, ())
+                Quit().run(self, self.frame_history.exec_frame, ())
                 break
             try:
                 cmd, args = Command.from_raw_input(input)
@@ -101,7 +103,7 @@ class Pybreak(Bdb):
                 # to a standard command. Evaluate it.
                 self._eval_and_print_result(input)
             else:
-                cmd.run(self, self.current_frame, *args)
+                cmd.run(self, self.frame_history.exec_frame, *args)
                 if cmd.after == After.Proceed:
                     break
                 elif cmd.after == After.Stay:
@@ -126,10 +128,7 @@ class Pybreak(Bdb):
          line
         """
         if self.stop_here(frame):
-            self.stack.append(inspect.getframeinfo(frame))
-            # We're stopping at this frame, so update our internal
-            # state.
-            self.current_frame = frame
+            self.frame_history.append(frame)
             # TODO: Only capture output if continuation command ran
             self.repeatedly_prompt()
 
@@ -139,14 +138,13 @@ class Pybreak(Bdb):
             print_formatted_text(HTML('_' * num_cols))
             print_formatted_text(HTML(f"<b>Pybreak {__version__}</b>\n"))
         super().set_trace(frame)
-        self.current_frame = frame
 
     def do_clear(self, arg):
         self.clear_all_breaks()
 
     def _get_rprompt(self):
-        file_name = self.current_frame.f_code.co_filename
-        line_no = self.current_frame.f_lineno
+        file_name = self.frame_history.exec_frame.filename
+        line_no = self.frame_history.exec_frame.lineno
         try:
             rprompt = Path(file_name).relative_to(Path.cwd())
         except ValueError:
@@ -155,10 +153,9 @@ class Pybreak(Bdb):
         return f"{rprompt}:{line_no}"
 
     def _get_bottom_toolbar(self):
-        frameinfo = inspect.getframeinfo(self.current_frame)
-        args = inspect.getargvalues(self.current_frame)
+        f = self.frame_history.exec_frame
         term_width = get_terminal_size().cols
-        content = f"{Path(frameinfo.filename).stem}:{frameinfo.function}:{frameinfo.lineno} {args.locals}"
+        content = f"{Path(f.filename).stem}:{f.frame_info.function}:{f.lineno} {f.frame_locals}"
 
         content = textwrap.shorten(content, width=term_width - 2)
         content = f"{content:<{term_width}}"
@@ -168,7 +165,7 @@ class Pybreak(Bdb):
     def _eval_and_print_result(self, input: str):
         try:
             output = pprint.pformat(self.runeval(
-                input, self.current_frame.f_globals, self.current_frame.f_locals
+                input, self.frame_history.exec_frame.frame_info.frame, self.frame_history.exec_frame.frame_locals
             ))
             tokens = pygments.lex(output, lexer=PythonLexer())
             print_formatted_text(PygmentsTokens(tokens))
