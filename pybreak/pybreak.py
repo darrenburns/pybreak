@@ -15,7 +15,6 @@ from pygments.styles import get_style_by_name
 from prompt_toolkit import PromptSession, print_formatted_text, HTML
 from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.filters import Condition
 from prompt_toolkit.formatted_text import PygmentsTokens
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.key_processor import KeyPressEvent
@@ -31,11 +30,6 @@ styles = merge_styles([
     styles,
     style_from_pygments_cls(get_style_by_name('monokai'))
 ])
-
-
-@Condition
-def take_newline(*args, **kwargs):
-    return True
 
 
 def prompt_continuation(width, line_number, is_soft_wrap):
@@ -79,7 +73,7 @@ class Pybreak(Bdb):
             rprompt=self._get_rprompt,
             style=styles,
             auto_suggest=AutoSuggestFromHistory(),
-            multiline=take_newline,
+            multiline=True,
             bottom_toolbar=self._get_bottom_toolbar,
             prompt_continuation=prompt_continuation,
             key_bindings=bindings,
