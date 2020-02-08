@@ -133,6 +133,22 @@ class DiffVariable(Command):
     arity = 1
 
 
+class HistoryOfVariable(Command):
+    """
+    List all the historical changes to a variable
+    currently in scope. TODO: In scope where? Orange or green?
+    """
+    alias_list = ("h", "hist", "history")
+    arity = 1
+
+    def run(self, debugger, frame, *args):
+        self.validate_args(args)
+        frames = debugger.frame_history
+        hist = frames.history_of_local(args[0])
+        log(hist)
+
+
+
 class NextLine(Command):
     """
     Continue execution until the next line.

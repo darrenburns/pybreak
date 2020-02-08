@@ -13,12 +13,13 @@ def frame_uuid():
 
 @dataclass
 class FrameState:
-    def __init__(self, frame: types.FrameType):
+    def __init__(self, frame: types.FrameType, entry_num: int):
         self.raw_frame = frame
         self.frame_info: inspect.Traceback = inspect.getframeinfo(frame)
         self.frame_locals: Dict[str, Any] = frame.f_locals
         self.uuid: str = frame_uuid()
         self.exec_time: datetime.datetime = datetime.datetime.now()
+        self.entry_num = entry_num
 
     @property
     def uuid_short(self):

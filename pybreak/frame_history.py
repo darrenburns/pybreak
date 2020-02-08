@@ -1,11 +1,17 @@
 import types
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from dataclasses import dataclass, field
 
 from pybreak.frame_state import FrameState
 
 FrameUUID = str
+
+
+@dataclass
+class ChangeSet:
+    var_name: str
+    changed_in_frames: List[FrameState] = field(default_factory=list)
 
 
 @dataclass
@@ -21,7 +27,7 @@ class FrameHistory:
         history, we implicitly update the current location
         to indicate where we're at in execution.
         """
-        frame_state = FrameState(frame)
+        frame_state = FrameState(frame, entry_num=len(self.history))
         self.location = frame_state.uuid  # always refers to latest EXECUTED frame. nothing to do with history...
         self.history[self.location] = frame_state
         self.hist_index = len(self.history) - 1  # move view back to latest frame
@@ -49,3 +55,6 @@ class FrameHistory:
     @property
     def viewing_history(self):
         return self.hist_index != len(self.history) - 1
+
+    def history_of_local(self, variable_name: str) -> ChangeSet:
+        pass
