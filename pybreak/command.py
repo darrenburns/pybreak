@@ -147,16 +147,18 @@ class DiffVariable(Command):
             differ = difflib.Differ()
             diff = differ.compare(hist_repr, exec_repr)
             colour_diff = []
+            offset = debugger.frame_history.hist_offset
             for line in diff:
                 if line.startswith("+"):
                     # Exec frame value
-                    colour_diff.append(f"<style bg='greenyellow' fg='black'> {var_name} @ STACK[-1] </style> <greenyellow>{line[1:]}</greenyellow>")
+                    colour_diff.append(
+                        f"<style bg='greenyellow' fg='black'> {var_name} @ STACK[-1] </style> <greenyellow>{line[1:]}</greenyellow>")
                 elif line.startswith("-"):
                     # Historical frame value
-                    offset = debugger.frame_history.hist_offset
-                    colour_diff.append(f"<style bg='coral' fg='black'> {var_name} @ STACK[-{offset}] </style> <coral>{line[1:]}</coral>")
+                    colour_diff.append(
+                        f"<style bg='coral' fg='black'> {var_name} @ STACK[-{offset}] </style> <coral>{line[1:]}</coral>")
                 else:
-                    colour_diff.append(line)
+                    colour_diff.append(f"{' ' * (14 + len(var_name) + len(str(offset)))}{line[1:]}")
             log(HTML("\n".join(colour_diff)))
 
         debugger.prev_command = self
