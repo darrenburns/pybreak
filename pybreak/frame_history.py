@@ -1,4 +1,5 @@
 import types
+from copy import deepcopy
 from typing import Dict, Optional, List
 
 from dataclasses import dataclass, field
@@ -27,7 +28,11 @@ class FrameHistory:
         history, we implicitly update the current location
         to indicate where we're at in execution.
         """
-        frame_state = FrameState(frame, entry_num=len(self.history))
+        frame_state = FrameState(
+            frame,
+            deepcopy(frame.f_locals),
+            entry_num=len(self.history)
+        )
         self.location = frame_state.uuid  # always refers to latest EXECUTED frame. nothing to do with history...
         self.history[self.location] = frame_state
         self.hist_index = len(self.history) - 1  # move view back to latest frame
@@ -58,3 +63,10 @@ class FrameHistory:
 
     def history_of_local(self, variable_name: str) -> ChangeSet:
         pass
+
+    @property
+    def hist_offset(self):
+        stack_size = len(self.history)
+        return stack_size - self.hist_index
+
+

@@ -1,4 +1,6 @@
 import bdb
+import difflib
+import pprint
 import shlex
 import sys
 from enum import auto, Enum
@@ -6,7 +8,7 @@ from typing import Tuple, Dict, Any
 
 from pygments.styles import get_style_by_name
 
-from prompt_toolkit import print_formatted_text as log
+from prompt_toolkit import print_formatted_text as log, HTML
 from prompt_toolkit.styles import style_from_pygments_cls
 from pybreak.frame_state import FrameState
 from pybreak.utility import get_location_snippet
@@ -125,12 +127,39 @@ class DiffVariable(Command):
     Show a diff between the current repr of a variable
     with the previous repr, before it last changed.
     """
-
-    def run(self, debugger, frame, *args):
-        debugger.prev_command = self
-
     alias_list = ("d", "diff")
     arity = 1
+
+    def run(self, debugger, frame, *args):
+        self.validate_args(args)
+        exec_frame: FrameState = debugger.frame_history.exec_frame
+        hist_frame: FrameState = debugger.frame_history.hist_frame
+        var_name = args[0]
+        # log("Frame comparison:", exec_frame.raw_frame is hist_frame.raw_frame)
+        # log("Raw frames: ", exec_frame.raw_frame, hist_frame.raw_frame)
+        # log("Exec frame locals", exec_frame.frame_locals)
+        # log("Hist frame locals", hist_frame.frame_locals)
+
+        # Lets ensure that we're in the same frame
+        if hist_frame.raw_frame is exec_frame.raw_frame:
+            hist_repr = pprint.pformat(hist_frame.frame_locals.get(var_name)).split('\n')
+            exec_repr = pprint.pformat(exec_frame.frame_locals.get(var_name)).split('\n')
+            differ = difflib.Differ()
+            diff = differ.compare(hist_repr, exec_repr)
+            colour_diff = []
+            for line in diff:
+                if line.startswith("+"):
+                    # Exec frame value
+                    colour_diff.append(f"<style bg='greenyellow' fg='black'> {var_name} @ STACK[-1] </style> <greenyellow>{line[1:]}</greenyellow>")
+                elif line.startswith("-"):
+                    # Historical frame value
+                    offset = debugger.frame_history.hist_offset
+                    colour_diff.append(f"<style bg='coral' fg='black'> {var_name} @ STACK[-{offset}] </style> <coral>{line[1:]}</coral>")
+                else:
+                    colour_diff.append(line)
+            log(HTML("\n".join(colour_diff)))
+
+        debugger.prev_command = self
 
 
 class HistoryOfVariable(Command):
@@ -146,7 +175,6 @@ class HistoryOfVariable(Command):
         frames = debugger.frame_history
         hist = frames.history_of_local(args[0])
         log(hist)
-
 
 
 class NextLine(Command):

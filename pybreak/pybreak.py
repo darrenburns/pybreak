@@ -170,9 +170,8 @@ class Pybreak(Bdb):
         f = self.frame_history.exec_frame
         term_width = get_terminal_size().cols
 
-        stack_size = len(self.frame_history.history)
-        r_offset = stack_size - self.frame_history.hist_index
         if self.frame_history.viewing_history:
+            r_offset = self.frame_history.hist_offset
             mode_fg = "coral"
             mode_bg = "black"
             mode = f" Location: STACK[-{r_offset}] "
