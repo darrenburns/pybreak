@@ -41,8 +41,6 @@ class Pybreak(Bdb):
     def __init__(self):
         super().__init__()
         self.num_prompts = 0
-        # self.frame_history.exec_frame: Optional[types.FrameType] = None
-        # self.stack: List[inspect.Traceback] = []
         self.frame_history = FrameHistory()
         self.eval_count: int = 0
         self.prev_command = None
@@ -128,7 +126,9 @@ class Pybreak(Bdb):
         self.quitting = True
 
     def user_call(self, frame: types.FrameType, argument_list):
-        pass
+        if self.stop_here(frame):
+            self.frame_history.append(frame)
+            self.repeatedly_prompt()
 
     def user_line(self, frame: types.FrameType):
         """

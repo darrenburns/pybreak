@@ -11,12 +11,8 @@ def merge_sort(m):
         return m
 
     middle = len(m) // 2
-    pybreak.set_trace()
-    print("ON LINE 15")
     left = m[:middle]
-    print("ON LINE 17")
     right = m[middle:]
-    print("ON LINE 18")
 
     left = merge_sort(left)
     right = merge_sort(right)
@@ -24,6 +20,7 @@ def merge_sort(m):
 
 
 def merge(left, right):
+    pybreak.set_trace()
     result = []
     left_idx, right_idx = 0, 0
     while left_idx < len(left) and right_idx < len(right):
