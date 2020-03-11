@@ -33,6 +33,22 @@ def formatted_padding(n):
     return 'class:pygments.text', (" " * n)
 
 
+@dataclass
+class TerminalSize:
+    rows: int
+    cols: int
+
+
+def get_terminal_size() -> TerminalSize:
+    for i in range(0, 3):
+        try:
+            cols, rows = os.get_terminal_size(i)
+            return TerminalSize(rows=rows, cols=cols)
+        except OSError:
+            continue
+    return TerminalSize(rows=24, cols=80)
+
+
 def with_gutter(lines, start_line_idx: int, focus_line_idx: int, secondary_focus_idx: int):
     start_line_num = start_line_idx + 1
     updated_lines = []
@@ -73,19 +89,3 @@ def get_tokenised_lines(file_name: str):
         tokens = pygments.lex(src, lexer=PythonLexer())
         tokens = to_formatted_text(PygmentsTokens(tokens))
         return list(l for l in split_lines(tokens))
-
-
-@dataclass
-class TerminalSize:
-    rows: int
-    cols: int
-
-
-def get_terminal_size() -> TerminalSize:
-    for i in range(0, 3):
-        try:
-            cols, rows = os.get_terminal_size(i)
-            return TerminalSize(rows=rows, cols=cols)
-        except OSError:
-            continue
-    return TerminalSize(rows=24, cols=80)

@@ -28,9 +28,13 @@ class FrameHistory:
         history, we implicitly update the current location
         to indicate where we're at in execution.
         """
+        try:
+            locals = deepcopy(frame.f_locals)
+        except TypeError:
+            locals = frame.f_locals
         frame_state = FrameState(
             frame,
-            deepcopy(frame.f_locals),
+            locals,
             entry_num=len(self.history)
         )
         self.location = frame_state.uuid  # always refers to latest EXECUTED frame. nothing to do with history...
@@ -68,5 +72,3 @@ class FrameHistory:
     def hist_offset(self):
         stack_size = len(self.history)
         return stack_size - self.hist_index
-
-

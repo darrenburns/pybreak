@@ -2,7 +2,6 @@ import datetime
 import inspect
 import types
 import uuid
-from copy import copy
 from typing import Dict, Any
 
 from dataclasses import dataclass

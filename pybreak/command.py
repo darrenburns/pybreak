@@ -2,16 +2,19 @@ import bdb
 import difflib
 import pprint
 import shlex
-import sys
+import textwrap
 from enum import auto, Enum
 from typing import Tuple, Dict, Any
 
+import sys
 from pygments.styles import get_style_by_name
 
 from prompt_toolkit import print_formatted_text as log, HTML
 from prompt_toolkit.styles import style_from_pygments_cls
 from pybreak.frame_state import FrameState
-from pybreak.utility import get_location_snippet
+from pybreak.utility import get_location_snippet, get_terminal_size
+
+monokai = style_from_pygments_cls(get_style_by_name('monokai'))
 
 
 class After(Enum):
@@ -79,7 +82,7 @@ class PrintNearbyCode(Command):
         lines = get_location_snippet(file_name, line_no, secondary_line_no)
         log("")
         for line in lines:
-            log(line, style=style_from_pygments_cls(get_style_by_name('monokai')))
+            log(line, style=monokai)
         log("")
 
 
@@ -104,7 +107,9 @@ class PrintArguments(Command):
     alias_list = ("a", "args")
 
     def run(self, debugger, frame, *args):
-        log(frame.frame_locals)
+        for var, val in frame.frame_locals.items():
+            output = textwrap.shorten(f"{var} = {val}", get_terminal_size().cols - 2)
+            log(output, style=monokai)
         debugger.prev_command = self
 
 
@@ -135,10 +140,6 @@ class DiffVariable(Command):
         exec_frame: FrameState = debugger.frame_history.exec_frame
         hist_frame: FrameState = debugger.frame_history.hist_frame
         var_name = args[0]
-        # log("Frame comparison:", exec_frame.raw_frame is hist_frame.raw_frame)
-        # log("Raw frames: ", exec_frame.raw_frame, hist_frame.raw_frame)
-        # log("Exec frame locals", exec_frame.frame_locals)
-        # log("Hist frame locals", hist_frame.frame_locals)
 
         # Lets ensure that we're in the same frame
         if hist_frame.raw_frame is exec_frame.raw_frame:
