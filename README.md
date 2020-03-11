@@ -1,4 +1,4 @@
-# Pybreak - A modern Python debugger
+# Pybreak - Travel back in time to debug your Python ⏰ 🐍
 
 Diff your variables with their historical values to see how they've changed over time:
 
